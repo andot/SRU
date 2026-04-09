@@ -220,3 +220,4 @@ CONTEXT.md
 *.mp4
 /.claude
 /.vscode
+.DS_Store

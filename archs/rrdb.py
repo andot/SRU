@@ -5,7 +5,7 @@ import torch.nn.functional as F
 
 class ResidualDenseBlock_5C(nn.Module):
     def __init__(self, nf=64, gc=32):
-        super().__init__()
+        super(ResidualDenseBlock_5C, self).__init__()
         self.conv1 = nn.Conv2d(nf, gc, 3, 1, 1)
         self.conv2 = nn.Conv2d(nf + gc, gc, 3, 1, 1)
         self.conv3 = nn.Conv2d(nf + gc * 2, gc, 3, 1, 1)
@@ -24,7 +24,7 @@ class ResidualDenseBlock_5C(nn.Module):
 
 class RRDB(nn.Module):
     def __init__(self, nf, gc=32):
-        super().__init__()
+        super(RRDB, self).__init__()
         self.rdb1 = ResidualDenseBlock_5C(nf, gc)
         self.rdb2 = ResidualDenseBlock_5C(nf, gc)
         self.rdb3 = ResidualDenseBlock_5C(nf, gc)
@@ -46,13 +46,15 @@ class RRDBNet(nn.Module):
         self,
         num_in_ch=3,
         num_out_ch=3,
+        scale=4,
         num_feat=64,
         num_block=23,
         num_grow_ch=32,
-        scale=4,
     ):
-        super().__init__()
+        super(RRDBNet, self).__init__()
         self.scale = scale
+        # upsample layers — use nn.Upsample (Module) instead of F.interpolate
+        self.upsample = nn.Upsample(scale_factor=2, mode="nearest")
         # Match basicsr: pixel unshuffle expands channels for scale < 4
         self._unshuffle_factor = 0
         if scale == 2:
@@ -66,8 +68,6 @@ class RRDBNet(nn.Module):
             *[RRDB(num_feat, num_grow_ch) for _ in range(num_block)]
         )
         self.conv_body = nn.Conv2d(num_feat, num_feat, 3, 1, 1)
-        # upsample layers — use nn.Upsample (Module) instead of F.interpolate
-        self.upsample = nn.Upsample(scale_factor=2, mode="nearest")
         # always create both conv_up layers (matching basicsr)
         self.conv_up1 = nn.Conv2d(num_feat, num_feat, 3, 1, 1)
         self.conv_up2 = nn.Conv2d(num_feat, num_feat, 3, 1, 1)
@@ -75,13 +75,9 @@ class RRDBNet(nn.Module):
         self.conv_last = nn.Conv2d(num_feat, num_out_ch, 3, 1, 1)
         self.lrelu = nn.LeakyReLU(negative_slope=0.2, inplace=False)
 
-    @staticmethod
-    def _pixel_unshuffle(x, factor):
-        return F.pixel_unshuffle(x, factor)
-
     def forward(self, x):
         if self._unshuffle_factor > 0:
-            x = RRDBNet._pixel_unshuffle(x, self._unshuffle_factor)
+            x = F.pixel_unshuffle(x, self._unshuffle_factor)
         feat = self.conv_first(x)
         body_feat = self.conv_body(self.body(feat))
         feat = feat + body_feat

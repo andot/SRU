@@ -30,9 +30,9 @@ def find_checkpoint(model_name: str) -> Optional[str]:
     )
 
 
-def prepare_net(model_name: str, ckpt_path: str, in_ch: int = 3):
+def prepare_net(model_name: str, ckpt_path: str):
     try:
-        net = build_net(model_name, in_ch=in_ch)
+        net = build_net(model_name)
     except Exception as e:
         print(f"[Error] failed to build network: {e}", file=sys.stderr)
         return None

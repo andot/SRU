@@ -2,6 +2,20 @@ import torch.nn as nn
 
 
 class SRVGGNetCompact(nn.Module):
+    """A compact VGG-style network structure for super-resolution.
+
+    It is a compact network structure, which performs upsampling in the last layer and no convolution is
+    conducted on the HR feature space.
+
+    Args:
+        num_in_ch (int): Channel number of inputs. Default: 3.
+        num_out_ch (int): Channel number of outputs. Default: 3.
+        num_feat (int): Channel number of intermediate features. Default: 64.
+        num_conv (int): Number of convolution layers in the body network. Default: 16.
+        upscale (int): Upsampling factor. Default: 4.
+        act_type (str): Activation type, options: 'relu', 'prelu', 'leakyrelu'. Default: prelu.
+    """
+
     def __init__(
         self,
         num_in_ch=3,
@@ -11,7 +25,7 @@ class SRVGGNetCompact(nn.Module):
         upscale=4,
         act_type="prelu",
     ):
-        super().__init__()
+        super(SRVGGNetCompact, self).__init__()
         self.num_in_ch = num_in_ch
         self.num_out_ch = num_out_ch
         self.num_feat = num_feat
@@ -33,7 +47,7 @@ class SRVGGNetCompact(nn.Module):
         self.body = nn.Sequential(*mods)
 
         # Use nn.Upsample (Module) instead of F.interpolate for better CoreML compatibility
-        self.base_upsampler = nn.Upsample(
+        self.upsample = nn.Upsample(
             scale_factor=float(upscale), mode="nearest", recompute_scale_factor=False
         )
 
@@ -50,7 +64,7 @@ class SRVGGNetCompact(nn.Module):
                 raise ValueError(f"Unsupported activation type: {act_type}")
 
     def forward(self, x):
-        return self.body(x) + self.base_upsampler(x)
+        return self.body(x) + self.upsample(x)
 
 
 __all__ = ["SRVGGNetCompact"]
